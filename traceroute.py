@@ -1,5 +1,5 @@
 import time
-from scapy.all import *
+from scapy.all import IP, ICMP, Raw, RandString, sr1, packet
 
 
 class Traceroute:
@@ -26,7 +26,8 @@ class Traceroute:
                 self._formatted_output(i, reply.src, self._get_time(reply))
 
     def _create_packet(self, cur_ttl: int) -> packet:
-        return IP(dst=self.hostname, ttl=cur_ttl) / ICMP(seq=self.sequence) / Raw(RandString(self.size - 28))
+        pkt = IP(dst=self.hostname, ttl=cur_ttl) / ICMP(seq=self.sequence)
+        return pkt / Raw(RandString(self.size - len(pkt)))
 
     @staticmethod
     def _get_time(reply: packet) -> int:
