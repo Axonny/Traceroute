@@ -42,9 +42,9 @@ class Traceroute:
         return answers
 
     def _create_packet(self, cur_ttl: int) -> packet:
-        ip = IPv6(dst=self.hostname, ttl=cur_ttl) if self.ipv6 else IP(dst=self.hostname, ttl=cur_ttl)
+        ip = IPv6(dst=self.hostname, hlim=cur_ttl) if self.ipv6 else IP(dst=self.hostname, ttl=cur_ttl)
         if self.isTCP:
-            protocol = TCP(dport=self.port)
+            protocol = TCP(dport=self.port, flags='S')
         else:
             protocol = ICMPv6EchoRequest(seq=self.sequence) if self.ipv6 else ICMP(seq=self.sequence)
         pkt = ip / protocol
