@@ -25,7 +25,7 @@ class Traceroute:
                 continue
 
             reply = replies[0]
-            if (TCP in reply and reply['TCP'].flags.A) or reply.type == 0:
+            if (TCP in reply and reply['TCP'].flags.A) or reply.type != (3 if self.ipv6 else 11):
                 self._formatted_output(i, self._join_src(replies), self._get_times(replies))
                 print("Done!")
                 break
