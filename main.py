@@ -5,6 +5,7 @@ from traceroute import Traceroute
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('host', type=str, help='The host to traceroute to')
+    p.add_argument('-6', action='store_true', help='Use IPv6', dest='ipv6')
     p.add_argument('-s', '--sequence', type=int, default=0,
                    help='set sequence number for ICMP packets')
     p.add_argument('-q', '----queries', type=int, default=3,
@@ -17,9 +18,14 @@ def main():
                    help='Set the max number of hops (max TTL to be reached). Default is 30')
     p.add_argument('--size', type=int, default=40,
                    help='Set packet size (bytes). Default is 40')
+    p.add_argument('-T', '--tcp', action='store_true',
+                   help='Use TCP SYN for tracerouting. Default port is 80')
+    p.add_argument('-p', '--port', type=int, default=80,
+                   help='Set the destination port to use. Default is 80')
 
     args = p.parse_args()
-    trace = Traceroute(args.host, args.sequence, args.queries, args.sendwait, args.wait, args.max_hops, args.size)
+    trace = Traceroute(args.host, args.sequence, args.queries, args.sendwait, args.wait,
+                       args.max_hops, args.size, args.ipv6, args.tcp, args.port)
     trace.traceroute()
 
 
