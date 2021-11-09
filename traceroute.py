@@ -25,7 +25,7 @@ class Traceroute:
                 continue
 
             reply = replies[0]
-            if (ICMP in reply and reply['ICMP'].type == 0) or (TCP in reply and reply['TCP'].flags.A):
+            if (TCP in reply and reply['TCP'].flags.A) or reply.type == 0:
                 self._formatted_output(i, self._join_src(replies), self._get_times(replies))
                 print("Done!")
                 break
