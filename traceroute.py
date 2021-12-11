@@ -1,54 +1,49 @@
 import time
 from scapy.all import *
+from ipwhois import IPWhois, IPDefinedError
 
 
 class Traceroute:
-    def __init__(self, hostname: str, sequence=0, queries=3, sendwait=0, wait=1000, max_hops=30, size=40,
-                 ipv6=False, isTCP=False, port=0):
-        self.hostname = hostname
-        self.sequence = sequence
-        self.queries = queries
-        self.sendwait = sendwait
-        self.wait = wait
-        self.max_hops = max_hops
-        self.size = size
-        self.ipv6 = ipv6
-        self.isTCP = isTCP
-        self.port = port
 
-    def traceroute(self) -> None:
+    max_hops = 30
+    __slots__ = {"hostname", "queries", "timeout", "ipv6", "verbose", "__dict__"}
+
+    def __init__(self, hostname: str, queries=3, timeout=1000, ipv6=False, verbose=False):
+        self.hostname = hostname
+        self.queries = queries
+        self.timeout = timeout
+        self.ipv6 = ipv6
+        self.verbose = verbose
+
+    def traceroute(self) -> list[dict]:
+        ans = []
         for i in range(1, self.max_hops + 1):
             pkt = self._create_packet(i)
             replies = self._send_packet(pkt)
             if len(replies) == 0:
-                self._formatted_output(i, "**.***.***.***", "*")
+                self._formatted_output(i, "*", "*", "     * ms")
                 continue
+            self._formatted_output(i, self._join_src(replies), self._get_asn(replies), self._get_times(replies))
 
             reply = replies[0]
-            if (TCP in reply and reply['TCP'].flags.A) or reply.type != (3 if self.ipv6 else 11):
-                self._formatted_output(i, self._join_src(replies), self._get_times(replies))
+            if reply.type != (3 if self.ipv6 else 11):
                 print("Done!")
                 break
-            else:
-                self._formatted_output(i, self._join_src(replies), self._get_times(replies))
+        return ans
 
     def _send_packet(self, pkt: packet) -> list[packet]:
         answers = []
         for _ in range(self.queries):
-            reply = sr1(pkt, verbose=0, timeout=self.wait / 1000, inter=self.sendwait / 1000)
+            reply = sr1(pkt, verbose=0, timeout=self.timeout)
             if reply is not None:
                 reply.reply_time = self._get_time(reply)
                 answers.append(reply)
         return answers
 
     def _create_packet(self, cur_ttl: int) -> packet:
-        ip = IPv6(dst=self.hostname, hlim=cur_ttl) if self.ipv6 else IP(dst=self.hostname, ttl=cur_ttl)
-        if self.isTCP:
-            protocol = TCP(dport=self.port, flags='S')
-        else:
-            protocol = ICMPv6EchoRequest(seq=self.sequence) if self.ipv6 else ICMP(seq=self.sequence)
-        pkt = ip / protocol
-        return pkt / Raw(RandString(self.size - len(pkt)))
+        if self.ipv6:
+            return IPv6(dst=self.hostname, hlim=cur_ttl) / ICMPv6EchoRequest()
+        return IP(dst=self.hostname, ttl=cur_ttl) / ICMP()
 
     @staticmethod
     def _get_time(reply: packet) -> int:
@@ -57,8 +52,8 @@ class Traceroute:
         return ms
 
     @staticmethod
-    def _formatted_output(n: int, ip: str, ms: int) -> None:
-        print(f'{n:<3}', f'{ip:<15}', ms)
+    def _formatted_output(n: int, ip: str, asn: str, ms: int) -> None:
+        print(f'{n:<3}', f'{ip:<15}  ', f'{asn:<10}', ms)
 
     @staticmethod
     def _join_src(replies=list[packet]) -> str:
@@ -67,4 +62,12 @@ class Traceroute:
     @staticmethod
     def _get_times(replies=list[packet]) -> float:
         times = [reply.reply_time for reply in replies]
-        return '  '.join([f'{round(t, 3):<5} ms' for t in times])
+        return '  '.join([f'{round(t, 3):>6} ms' for t in times])
+
+    @staticmethod
+    def _get_asn(replies=list[packet]) -> str:
+        try:
+            unique_ip = set([reply.src for reply in replies])
+            return ' '.join([IPWhois(ip).ipasn.lookup()['asn'] for ip in unique_ip])
+        except IPDefinedError:
+            return 'Private'
