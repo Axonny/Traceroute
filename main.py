@@ -2,16 +2,6 @@ import argparse
 from traceroute import Traceroute
 
 
-def formatted(trace: list[dict]):
-    for hop in trace:
-        ip = ' '.join(hop["ip"]) if len(hop['ip']) > 0 else '*'
-        if len(hop['ms']) > 0:
-            times = '  '.join([f'{round(t, 3):<5} ms' for t in hop['ms']])
-        else:
-            times = '    * ms'
-        print(f'{hop["hop"]:<3}', f'{ip:<15}', times)
-
-
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('ip_address', type=str, help='target ip address')
@@ -23,17 +13,8 @@ def main():
     args = p.parse_args()
 
     trace = Traceroute(args.ip_address, args.n, args.timeout, args.ipv6, args.verbose)
-    formatted(trace.traceroute())
+    trace.traceroute()
 
 
 if __name__ == '__main__':
     main()
-
-#  TODO
-#  1)[+] ArgParse
-#  2)[+] timeout
-#  3)[+] ICMP
-#  4)[+] count queries
-#  5)[-] AS (whois)
-#  6)[+] Formatted output
-#  7)[+] Ipv6
